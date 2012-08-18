@@ -12,6 +12,7 @@ This crawler offers:
   * stores results into a single stream file, optimal for later batch processing
   * short pauses between requests to the same server
   * a simplistic HTML "parser"
+  * asynchronous DNS resolution via libadns
   * short an concise program code
   * liberal licencing terms
 
