@@ -31,6 +31,7 @@ class Domain {
       reportDownloaded = 0;
       reportDownloadedNew = 0;
 
+      maximalUrlLength = 256;
       maximalDownloaded = 2000000;
       
       gettimeofday(&lastActivity, 0);
@@ -121,8 +122,10 @@ class Domain {
 
       ssize_t len = read(socket, inBufferFill, inBuffer + BUFFER_SIZE - inBufferFill);
 
-      if(len < 0) throw std::runtime_error("read failed in weird ways " + std::string(strerror(errno)));
-      if(len == 0) {
+      if(len < 0) {
+        std::cerr << "read failed in weird ways: " + std::string(strerror(errno)) << std::endl;
+        handleEnd(add, del, finish);
+      } else if(len == 0) {
         handleEnd(add, del, finish);
       } else {
         reportDownloaded += len;
@@ -273,6 +276,7 @@ class Domain {
     uint64_t reportDownloadedNew;
 
     uint64_t currentDownloaded;
+    int64_t maximalUrlLength;
     uint64_t maximalDownloaded;
 
     std::string extractHost(const std::string &url) {
@@ -394,6 +398,7 @@ class Domain {
 
     void handleUrl(const char *b, const char *e) {
       assert(b != e);
+      if(e - b > maximalUrlLength) return;
 
       std::string url(b, e);
 
