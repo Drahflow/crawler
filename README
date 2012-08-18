@@ -1,0 +1,39 @@
+Problem domain:
+  You want to crawl a non-trivial amount of webpages using
+  only your personal computer.
+
+This crawler offers:
+  * integrated duplicate detection, only process each unique line once
+  * modest memory and cpu requirements:
+    400.000.000+ line duplicate cache
+    128 different domains in parallel
+    10 MBit/s download speed (before removal of duplicates)
+    => 1 GB RAM + ~10% of a single core
+  * stores results into a single stream file, optimal for later batch processing
+  * short pauses between requests to the same server
+  * a simplistic HTML "parser"
+  * short an concise program code
+  * liberal licencing terms
+
+= "Architecture" (i.e. what I wrote before the code) =
+
+Input:
+  List of URLs
+
+Create Bloom filter for seen URLs
+Create Bloom filter for seen Lines
+
+For each domain:
+  Open output stream
+  Fetch robots.txt, parse into patterns
+  
+  Create client socket and read / write buffers
+  Fetch page
+  Parse into lines, check with filter
+  Put surviving lines into output stream
+
+  Parse target URLs, check with filter
+  Put surviving URLs into search front
+    if search front limit per domain has been reached, drop URL
+
+  Cooldown timer
