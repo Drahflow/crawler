@@ -114,84 +114,93 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    while(domainsResolving.size() + downloadingCount < activeDomains && !domainsNew.empty()) {
-      adns_query query;
+    for(int i = 0; i < 10; ++i) {
+      while(!domainsNew.empty() &&
+          domainsResolving.size() + downloadingCount < activeDomains && !domainsNew.empty() &&
+          domainsResolving.size() < 128) { // empirical testing says too many outstanding queries just timeout
+        adns_query query;
 
-      adns_submit(adnsState,
-          domainsNew.back()->getHostname().c_str(), 
-          adns_r_a, adns_queryflags(), domainsNew.back(), &query);
+        adns_submit(adnsState,
+            domainsNew.back()->getHostname().c_str(), 
+            adns_r_a, adns_queryflags(), domainsNew.back(), &query);
 
-      domainsResolving.push_back(domainsNew.back());
-      domainsNew.pop_back();
-    }
-
-    while(1) {
-      Domain *resolved;
-      adns_query query = 0;
-      adns_answer *answer = 0;
-
-      adns_check(adnsState, &query, &answer, reinterpret_cast<void **>(&resolved));
-
-      if(!answer) break;
-
-      auto pos = std::find(domainsResolving.begin(), domainsResolving.end(), resolved);
-
-      if(answer->status != adns_s_ok) {
-        std::cout << "Domain resolution failed (" << answer->status << ") for: " << resolved->getHostname() << std::endl;
-      } else {
-        (*pos)->setIp(answer->rrs.inaddr->s_addr);
-
-        std::cout << "Domain resolved: " << resolved->getHostname() << " -> " << resolved->getIpString() << std::endl;
-
-        auto zero = find(domainsDownloading.begin(), domainsDownloading.end(), nullptr);
-        if(zero == domainsDownloading.end()) {
-          domainsDownloading.push_back(*pos);
-          zero = domainsDownloading.end() - 1;
-        } else {
-          *zero = *pos;
-        }
-
-        (*pos)->startDownloading([&](int fd, bool in, bool out) {
-          epoll_event ev { static_cast<uint32_t>(in * EPOLLIN | out * EPOLLOUT),
-            { .u64 = static_cast<uint64_t>(zero - domainsDownloading.begin()) }};
-          epoll_ctl(epollHandle, EPOLL_CTL_ADD, fd, &ev);
-        });
+        domainsResolving.push_back(domainsNew.back());
+        domainsNew.pop_back();
       }
 
-      assert(pos != domainsResolving.end());
+      while(1) {
+        Domain *resolved;
+        adns_query query = 0;
+        adns_answer *answer = 0;
 
-      *pos = domainsResolving.back();
-      domainsResolving.pop_back();
-    }
+        adns_check(adnsState, &query, &answer, reinterpret_cast<void **>(&resolved));
 
-    timeval end;
-    gettimeofday(&end, 0);
-    end.tv_sec++;
+        if(!answer) break;
 
-    while(1) {
-      epoll_event epollEvent;
+        auto pos = std::find(domainsResolving.begin(), domainsResolving.end(), resolved);
 
-      timeval now;
-      gettimeofday(&now, 0);
-      int msRemaining = ((end.tv_sec - now.tv_sec) * 1000000 + end.tv_usec - now.tv_usec) / 1000;
-      if(msRemaining < 0) break;
-      if(epoll_wait(epollHandle, &epollEvent, 1, msRemaining) <= 0) break;
+        if(answer->status != adns_s_ok) {
+          std::cout << "Domain resolution failed (" << answer->status << ") for: " << resolved->getHostname() << std::endl;
+        } else {
+          (*pos)->setIp(answer->rrs.inaddr->s_addr);
 
-      assert(epollEvent.data.u64 < domainsDownloading.size());
+          std::cout << "Domain resolved: " << resolved->getHostname() << " -> " << resolved->getIpString() << std::endl;
 
-      Domain *domain = domainsDownloading[epollEvent.data.u64];
-      
-      auto finish = [&] { domainsDownloading[epollEvent.data.u64] = 0; };
-      auto _ = [&](int action) {
-        return [&, action](int fd, bool in, bool out) {
-          epoll_event ev { static_cast<uint32_t>(in * EPOLLIN | out * EPOLLOUT), { .u64 = epollEvent.data.u64 }};
-          epoll_ctl(epollHandle, action, fd, &ev);
+          auto zero = find(domainsDownloading.begin(), domainsDownloading.end(), nullptr);
+          if(zero == domainsDownloading.end()) {
+            domainsDownloading.push_back(*pos);
+            zero = domainsDownloading.end() - 1;
+          } else {
+            *zero = *pos;
+          }
+
+          (*pos)->startDownloading([&](int fd, bool in, bool out) {
+            epoll_event ev { static_cast<uint32_t>(in * EPOLLIN | out * EPOLLOUT),
+              { .u64 = static_cast<uint64_t>(zero - domainsDownloading.begin()) }};
+            epoll_ctl(epollHandle, EPOLL_CTL_ADD, fd, &ev);
+          });
+        }
+
+        assert(pos != domainsResolving.end());
+
+        *pos = domainsResolving.back();
+        domainsResolving.pop_back();
+      }
+
+      timeval end;
+      gettimeofday(&end, 0);
+      end.tv_usec += 100000;
+
+      if(end.tv_usec >= 1000000) {
+        end.tv_usec -= 1000000;
+        end.tv_sec += 1;
+      }
+
+      while(1) {
+        epoll_event epollEvent;
+
+        timeval now;
+        gettimeofday(&now, 0);
+        int msRemaining = ((end.tv_sec - now.tv_sec) * 1000000 + end.tv_usec - now.tv_usec) / 1000;
+        if(msRemaining < 0) break;
+        if(epoll_wait(epollHandle, &epollEvent, 1, msRemaining) <= 0) break;
+
+        assert(epollEvent.data.u64 < domainsDownloading.size());
+
+        Domain *domain = domainsDownloading[epollEvent.data.u64];
+        
+        auto finish = [&] { domainsDownloading[epollEvent.data.u64] = 0; };
+        auto _ = [&](int action) {
+          return [&, action](int fd, bool in, bool out) {
+            epoll_event ev { static_cast<uint32_t>(in * EPOLLIN | out * EPOLLOUT), { .u64 = epollEvent.data.u64 }};
+            epoll_ctl(epollHandle, action, fd, &ev);
+          };
         };
-      };
 
-      if(epollEvent.events & EPOLLIN) domain->handleInput(_(EPOLL_CTL_ADD), _(EPOLL_CTL_MOD), _(EPOLL_CTL_DEL), finish);
-      if(epollEvent.events & EPOLLOUT) domain->handleOutput(_(EPOLL_CTL_ADD), _(EPOLL_CTL_MOD), _(EPOLL_CTL_DEL), finish);
-      if(epollEvent.events & (EPOLLERR | EPOLLHUP)) domain->handleError(_(EPOLL_CTL_ADD), _(EPOLL_CTL_MOD), _(EPOLL_CTL_DEL), finish);
+        if(epollEvent.events & EPOLLIN) domain->handleInput(_(EPOLL_CTL_ADD), _(EPOLL_CTL_MOD), _(EPOLL_CTL_DEL), finish);
+        if(epollEvent.events & EPOLLOUT) domain->handleOutput(_(EPOLL_CTL_ADD), _(EPOLL_CTL_MOD), _(EPOLL_CTL_DEL), finish);
+        if(epollEvent.events & (EPOLLERR | EPOLLHUP)) domain->handleError(_(EPOLL_CTL_ADD), _(EPOLL_CTL_MOD), _(EPOLL_CTL_DEL), finish);
+      }
     }
 
     while(!domainsDownloading.empty() && !domainsDownloading.back()) domainsDownloading.pop_back();
