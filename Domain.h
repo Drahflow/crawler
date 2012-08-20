@@ -377,10 +377,9 @@ class Domain {
     }
 
     void handleLine(const char *b, const char *e) {
-      if(seenLines->contains(b, e - b)) return;
+      if(seenLines->insert(b, e - b)) return;
 
       reportDownloadedNew += e - b;
-      seenLines->insert(b, e - b);
       output->handleLine(b, e);
 
       if(!recursionMode) return;
