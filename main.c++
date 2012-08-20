@@ -53,11 +53,13 @@ int main(int argc, char *argv[]) {
         getline(config, domain);
 
         Domain *&d = hostUnifier[Domain::extractHost(domain)];
-        if(!d) domains.push_back(d = new Domain(domain));
+        if(!d) {
+          domains.push_back(d = new Domain(domain));
+          d->setRemainingFetches(fetchesPerDomain);
+          d->setCooldownMilliseconds(cooldownMilliseconds);
+        }
 
         d->fetch(domain);
-        d->setRemainingFetches(fetchesPerDomain);
-        d->setCooldownMilliseconds(cooldownMilliseconds);
 
         std::cout << "Domain: " << domain << std::endl;
       } else {
