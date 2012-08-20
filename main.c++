@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
         } else {
           (*pos)->setIp(answer->rrs.inaddr->s_addr);
 
-          std::cout << "Domain resolved: " << resolved->getHostname() << " -> " << resolved->getIpString() << std::endl;
+          // std::cout << "Domain resolved: " << resolved->getHostname() << " -> " << resolved->getIpString() << std::endl;
 
           auto zero = find(domainsDownloading.begin(), domainsDownloading.end(), nullptr);
           if(zero == domainsDownloading.end()) {
