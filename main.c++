@@ -94,11 +94,18 @@ int main(int argc, char *argv[]) {
 
     std::cout << "\e[1;1H\e[2J";
 
+    Domain::ReportSum sum = { 0 };
     for(size_t i = 0; i < domainsDownloading.size(); ++i) {
       if(!domainsDownloading[i]) continue;
 
-      domainsDownloading[i]->report();
+      domainsDownloading[i]->report(&sum);
     }
+    std::cout << "[" <<
+      std::setw(10) << sum.reportDownloaded << " b/s | " <<
+      std::setw(10) << sum.reportDownloadedNew << " b/s ], " <<
+      std::setw(8) << sum.remainingFetches << " | " <<
+      std::setw(8) << sum.searchFrontSize << " -- Totals"
+      << std::endl;
 
     int bloomFill = seenLines.estimateFill();
 

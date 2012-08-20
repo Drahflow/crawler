@@ -241,7 +241,11 @@ class Domain {
       if(outBufferPos == outBufferFill) mod(socket, true, false);
     }
 
-    void report() {
+    struct ReportSum {
+      uint64_t reportDownloaded, reportDownloadedNew, remainingFetches, searchFrontSize;
+    };
+
+    void report(ReportSum *sum) {
       std::cout << "[" <<
         std::setw(10) << reportDownloaded << " b/s | " <<
         std::setw(10) << reportDownloadedNew << " b/s ], " <<
@@ -249,6 +253,13 @@ class Domain {
         std::setw(8) << searchFront.size() << " -- " <<
         hostname << (searchFront.empty()? "": searchFront.front())
         << std::endl;
+
+      if(sum) {
+        sum->reportDownloaded += reportDownloaded;
+        sum->reportDownloadedNew += reportDownloadedNew;
+        sum->remainingFetches += remainingFetches;
+        sum->searchFrontSize += searchFront.size();
+      }
 
       reportDownloaded = 0;
       reportDownloadedNew = 0;
