@@ -50,6 +50,14 @@ class Domain {
       cooldownMilliseconds = ms;
     }
 
+    void setRecursionMode(uint64_t mode) {
+      recursionMode = mode;
+    }
+
+    void setOutputPath(const std::string &path) {
+      outputPath = path;
+    }
+
     void setIp(uint32_t addr) {
       ip = addr;
     }
@@ -86,7 +94,7 @@ class Domain {
       while(remainingFetches < searchFront.size()) searchFront.pop_back();
       remainingFetches -= searchFront.size();
 
-      output = new DomainStream("data/" + hostname);
+      output = new DomainStream(outputPath + "/" + hostname);
 
       inBuffer = new char[BUFFER_SIZE];
       outBuffer = new char[BUFFER_SIZE];
@@ -273,7 +281,7 @@ class Domain {
       ++s;
       for(e = s; e != url.end() && *e != '/'; ++e);
 
-      return std::string(e, url.end());
+      return (e == url.end()? "/": "") + std::string(e, url.end());
     }
 
   private:
@@ -285,6 +293,9 @@ class Domain {
     uint64_t cooldownMilliseconds;
     uint64_t nextFetchTime;
     uint64_t remainingFetches;
+    uint64_t recursionMode;
+    std::string outputPath;
+
     DomainStream *output;
     std::list<std::string> searchFront;
     bool robotsTxtActive;
@@ -372,6 +383,7 @@ class Domain {
       seenLines->insert(b, e - b);
       output->handleLine(b, e);
 
+      if(!recursionMode) return;
       if(!remainingFetches) return;
 
       // searching for:

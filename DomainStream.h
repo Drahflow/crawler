@@ -12,6 +12,8 @@ class DomainStream {
   public:
     DomainStream(const std::string &filename) {
       fd = open(filename.c_str(), O_CREAT | O_LARGEFILE | O_TRUNC | O_WRONLY, 0644);
+      if(fd < 0) throw std::runtime_error("could not open " + filename + ": " + strerror(errno));
+
       outBufferFill = outBuffer;
     }
 

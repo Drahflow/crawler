@@ -26,6 +26,8 @@ int main(int argc, char *argv[]) {
     std::map<std::string, Domain *> hostUnifier;
     uint64_t cooldownMilliseconds = 5000;
     uint64_t fetchesPerDomain = 1000;
+    uint64_t recursionMode = 1;
+    std::string outputPath = "data";
 
     std::ifstream config(argv[1]);
 
@@ -42,12 +44,16 @@ int main(int argc, char *argv[]) {
         config >> fetchesPerDomain; config.get();
       } else if(configKeyword == "activeDomains") {
         config >> activeDomains; config.get();
+      } else if(configKeyword == "recursionMode") {
+        config >> recursionMode; config.get();
+      } else if(configKeyword == "outputPath") {
+        std::string path;
+        getline(config, path);
+        outputPath = path;
       } else if(configKeyword == "ignore") {
         std::string extension;
         getline(config, extension);
-
         ignoreList.insert(extension);
-        std::cout << "Extension to ignore: " << extension << std::endl;
       } else if(configKeyword == "fetch") {
         std::string domain;
         getline(config, domain);
@@ -57,13 +63,14 @@ int main(int argc, char *argv[]) {
           domains.push_back(d = new Domain(domain));
           d->setRemainingFetches(fetchesPerDomain);
           d->setCooldownMilliseconds(cooldownMilliseconds);
+          d->setRecursionMode(recursionMode);
+          d->setOutputPath(outputPath);
         }
 
         d->fetch(domain);
-
-        std::cout << "Domain: " << domain << std::endl;
       } else {
         std::cerr << "Unknow config keyword: " << configKeyword << std::endl;
+        return 1;
       }
     }
   }
@@ -103,7 +110,7 @@ int main(int argc, char *argv[]) {
       std::endl;
 
     if(bloomFill > 750) {
-      std::cout << "Bloom filter is full." << std::endl;
+      std::cerr << "Bloom filter is full." << std::endl;
       break;
     }
 
@@ -127,16 +134,14 @@ int main(int argc, char *argv[]) {
 
       if(!answer) break;
 
-      // std::cout << "Answer status: " << answer->status << std::endl;
-
       auto pos = std::find(domainsResolving.begin(), domainsResolving.end(), resolved);
 
       if(answer->status != adns_s_ok) {
-        std::cerr << "Domain resolution failed (" << answer->status << ") for: " << resolved->getHostname() << std::endl;
+        std::cout << "Domain resolution failed (" << answer->status << ") for: " << resolved->getHostname() << std::endl;
       } else {
         (*pos)->setIp(answer->rrs.inaddr->s_addr);
 
-        std::cerr << "Domain resolved: " << resolved->getHostname() << " -> " << resolved->getIpString() << std::endl;
+        std::cout << "Domain resolved: " << resolved->getHostname() << " -> " << resolved->getIpString() << std::endl;
 
         auto zero = find(domainsDownloading.begin(), domainsDownloading.end(), nullptr);
         if(zero == domainsDownloading.end()) {
