@@ -322,7 +322,7 @@ class Domain {
     uint64_t reportDownloadedNew;
 
     uint64_t currentDownloaded;
-    int64_t maximalUrlLength;
+    uint64_t maximalUrlLength;
     uint64_t maximalDownloaded;
 
     template<class A> void openSocket(const A &add) {
@@ -414,8 +414,6 @@ class Domain {
 
     void handleUrl(const char *b, const char *e) {
       assert(b != e);
-      if(e - b > maximalUrlLength) return;
-
       std::string url(b, e);
 
       // std::cout << "URL found: " << url << std::endl;
@@ -453,6 +451,7 @@ class Domain {
 
       url = base + url;
 
+      if(url.length() > maximalUrlLength) return;
       if(robotsTxt.matches(url)) return;
       if(seenUrls->contains(url)) return;
       seenUrls->insert(url);
