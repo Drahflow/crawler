@@ -64,9 +64,6 @@ class Domain {
 
     void setSeenLines(BloomSet *lines) {
       seenLines = lines;
-
-      seenUrls = new BloomSet(remainingFetches);
-      for(auto &url: searchFront) seenUrls->insert(url);
     }
 
     void setIgnoreList(PostfixSet *ignore) {
@@ -90,6 +87,9 @@ class Domain {
 
     template<class A> void startDownloading(const A &add) {
       if(searchFront.empty()) return;
+
+      seenUrls = new BloomSet(remainingFetches);
+      for(auto &url: searchFront) seenUrls->insert(url);
 
       while(remainingFetches < searchFront.size()) searchFront.pop_back();
       remainingFetches -= searchFront.size();
