@@ -13,7 +13,7 @@ class PrefixSet {
     }
 
     bool matches(const std::string &s) const {
-      for(auto &i: prefixes) if(!i.compare(0, i.length(), s)) return true;
+      for(auto &i: prefixes) if(!s.compare(0, i.length(), i)) return true;
       return false;
     }
 

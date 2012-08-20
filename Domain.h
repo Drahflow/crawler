@@ -435,10 +435,9 @@ class Domain {
       // std::cout << "base: " << base << std::endl;
       // std::cout << "absolute: " << base + url << std::endl;
 
-      if(robotsTxt.matches("/" + url)) return;
-
       url = base + url;
 
+      if(robotsTxt.matches(url)) return;
       if(seenUrls->contains(url)) return;
       seenUrls->insert(url);
 
