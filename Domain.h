@@ -435,6 +435,8 @@ class Domain {
       // std::cout << "base: " << base << std::endl;
       // std::cout << "absolute: " << base + url << std::endl;
 
+      if(robotsTxt.matches("/" + url)) return;
+
       url = base + url;
 
       if(seenUrls->contains(url)) return;
@@ -449,6 +451,8 @@ class Domain {
 
     void handleRobotsTxtLine(const char *b, const char *e) {
       if(b == e) return;
+
+      output->handleLine(b, e);
 
       const char *c = b;
       while(c != e && *c++ != ':'); --c;
