@@ -1,5 +1,6 @@
 #include "BloomSet.h"
 #include "PrefixSet.h"
+#include "PostfixSet.h"
 
 #include <cassert>
 
@@ -27,6 +28,18 @@ int main(void) {
   assert(!prefix.matches("/blorg"));
   assert(prefix.matches("/blog/what"));
   assert(prefix.matches("/blogwhat"));
+
+  PostfixSet postfix;
+
+  postfix.insert(".xyz");
+
+  assert(postfix.matches("/testing.xyz"));
+  assert(postfix.matches("whatever.xyz"));
+  assert(!postfix.matches("someother"));
+
+  postfix.insert("");
+  assert(postfix.matches("someother"));
+  assert(postfix.matches(""));
 
   return 0;
 }

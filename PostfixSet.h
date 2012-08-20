@@ -13,7 +13,7 @@ class PostfixSet {
     }
 
     bool matches(const std::string &s) const {
-      for(auto &i: postfixes) if(s.length() > i.length() && !s.compare(s.length() - i.length(), i.length(), i)) return true;
+      for(auto &i: postfixes) if(s.length() >= i.length() && !s.compare(s.length() - i.length(), i.length(), i)) return true;
       return false;
     }
 
