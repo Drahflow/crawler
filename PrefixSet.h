@@ -1,10 +1,10 @@
 #ifndef PREFIXSET_H
 #define PREFIXSET_H
 
-#include <string>
-#include <vector>
 #include <algorithm>
 #include <iostream>
+#include <string>
+#include <vector>
 
 class PrefixSet {
   public:
