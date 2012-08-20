@@ -5,60 +5,64 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <cassert>
 #include <adns.h>
 #include <sys/epoll.h>
 
 int main(int argc, char *argv[]) {
-  std::vector<Domain *> domains;
-  std::vector<Domain *> domainsNew;
-  std::vector<Domain *> domainsResolving;
-  std::vector<Domain *> domainsDownloading;
+  std::vector<Domain *> domains, domainsNew, domainsResolving, domainsDownloading;
 
   if(argc != 2) {
     std::cerr << "usage: ./crawler <config>" << std::endl;
     return 1;
   }
 
-  std::ifstream config(argv[1]);
-
-  uint64_t expectedLines = 100000;
-  uint64_t cooldownMilliseconds = 5000;
-  uint64_t fetchesPerDomain = 1000;
-  uint64_t activeDomains = 1024;
   PostfixSet ignoreList;
+  uint64_t expectedLines = 100000;
+  uint64_t activeDomains = 1024;
 
-  std::string configKeyword;
-  while(config.good()) {
-    getline(config, configKeyword, ' ');
-    if(configKeyword == "") break;
+  {
+    std::map<std::string, Domain *> hostUnifier;
+    uint64_t cooldownMilliseconds = 5000;
+    uint64_t fetchesPerDomain = 1000;
 
-    if(configKeyword == "expectedLines") {
-      config >> expectedLines; config.get();
-    } else if(configKeyword == "cooldownMilliseconds") {
-      config >> cooldownMilliseconds; config.get();
-    } else if(configKeyword == "fetchesPerDomain") {
-      config >> fetchesPerDomain; config.get();
-    } else if(configKeyword == "activeDomains") {
-      config >> activeDomains; config.get();
-    } else if(configKeyword == "ignore") {
-      std::string extension;
-      getline(config, extension);
+    std::ifstream config(argv[1]);
 
-      ignoreList.insert(extension);
-      std::cout << "Extension to ignore: " << extension << std::endl;
-    } else if(configKeyword == "fetch") {
-      std::string domain;
-      getline(config, domain);
-      domains.push_back(new Domain(domain));
-      Domain &d = *domains.back();
+    std::string configKeyword;
+    while(config.good()) {
+      getline(config, configKeyword, ' ');
+      if(configKeyword == "") break;
 
-      d.setRemainingFetches(fetchesPerDomain);
-      d.setCooldownMilliseconds(cooldownMilliseconds);
+      if(configKeyword == "expectedLines") {
+        config >> expectedLines; config.get();
+      } else if(configKeyword == "cooldownMilliseconds") {
+        config >> cooldownMilliseconds; config.get();
+      } else if(configKeyword == "fetchesPerDomain") {
+        config >> fetchesPerDomain; config.get();
+      } else if(configKeyword == "activeDomains") {
+        config >> activeDomains; config.get();
+      } else if(configKeyword == "ignore") {
+        std::string extension;
+        getline(config, extension);
 
-      std::cout << "Domain: " << domain << std::endl;
-    } else {
-      std::cerr << "Unknow config keyword: " << configKeyword << std::endl;
+        ignoreList.insert(extension);
+        std::cout << "Extension to ignore: " << extension << std::endl;
+      } else if(configKeyword == "fetch") {
+        std::string domain;
+        getline(config, domain);
+
+        Domain *&d = hostUnifier[Domain::extractHost(domain)];
+        if(!d) domains.push_back(d = new Domain(domain));
+
+        d->fetch(domain);
+        d->setRemainingFetches(fetchesPerDomain);
+        d->setCooldownMilliseconds(cooldownMilliseconds);
+
+        std::cout << "Domain: " << domain << std::endl;
+      } else {
+        std::cerr << "Unknow config keyword: " << configKeyword << std::endl;
+      }
     }
   }
 

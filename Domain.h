@@ -25,7 +25,6 @@ class Domain {
     Domain(const std::string &url): socket(0), inBuffer(0), outBuffer(0) {
       hostname = extractHost(url);
       searchFront.push_back("/robots.txt");
-      searchFront.push_back(extractPath(url));
       robotsTxtActive = true;
       robotsTxtRelevant = true;
       reportDownloaded = 0;
@@ -37,11 +36,14 @@ class Domain {
       gettimeofday(&lastActivity, 0);
     }
 
+    void fetch(const std::string &url) {
+      assert(extractHost(url) == hostname);
+
+      searchFront.push_back(extractPath(url));
+    }
+
     void setRemainingFetches(uint64_t n) {
       remainingFetches = n;
-
-      while(remainingFetches < searchFront.size()) searchFront.pop_back();
-      remainingFetches -= searchFront.size();
     }
 
     void setCooldownMilliseconds(uint64_t ms) {
@@ -80,6 +82,9 @@ class Domain {
 
     template<class A> void startDownloading(const A &add) {
       if(searchFront.empty()) return;
+
+      while(remainingFetches < searchFront.size()) searchFront.pop_back();
+      remainingFetches -= searchFront.size();
 
       output = new DomainStream("data/" + hostname);
 
@@ -241,6 +246,36 @@ class Domain {
       reportDownloadedNew = 0;
     }
 
+    static std::string extractHost(const std::string &url) {
+      std::string::const_iterator s, e;
+
+      for(s = url.begin(); s != url.end() && *s != ':'; ++s);
+      if(s == url.end() || *s != ':') throw std::runtime_error("Invalid url: " + url);
+      ++s;
+      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
+      ++s;
+      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
+      ++s;
+      for(e = s; e != url.end() && *e != '/'; ++e);
+
+      return std::string(s, e);
+    }
+
+    static std::string extractPath(const std::string &url) {
+      std::string::const_iterator s, e;
+
+      for(s = url.begin(); s != url.end() && *s != ':'; ++s);
+      if(s == url.end() || *s != ':') throw std::runtime_error("Invalid url: " + url);
+      ++s;
+      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
+      ++s;
+      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
+      ++s;
+      for(e = s; e != url.end() && *e != '/'; ++e);
+
+      return std::string(e, url.end());
+    }
+
   private:
     static const int BUFFER_SIZE = 1024 * 64;
 
@@ -278,36 +313,6 @@ class Domain {
     uint64_t currentDownloaded;
     int64_t maximalUrlLength;
     uint64_t maximalDownloaded;
-
-    std::string extractHost(const std::string &url) {
-      std::string::const_iterator s, e;
-
-      for(s = url.begin(); s != url.end() && *s != ':'; ++s);
-      if(s == url.end() || *s != ':') throw std::runtime_error("Invalid url: " + url);
-      ++s;
-      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
-      ++s;
-      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
-      ++s;
-      for(e = s; e != url.end() && *e != '/'; ++e);
-
-      return std::string(s, e);
-    }
-
-    std::string extractPath(const std::string &url) {
-      std::string::const_iterator s, e;
-
-      for(s = url.begin(); s != url.end() && *s != ':'; ++s);
-      if(s == url.end() || *s != ':') throw std::runtime_error("Invalid url: " + url);
-      ++s;
-      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
-      ++s;
-      if(s == url.end() || *s != '/') throw std::runtime_error("Invalid url: " + url);
-      ++s;
-      for(e = s; e != url.end() && *e != '/'; ++e);
-
-      return std::string(e, url.end());
-    }
 
     template<class A> void openSocket(const A &add) {
       assert(!socket);
