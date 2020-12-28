@@ -5,10 +5,10 @@ CXXOPTS=-std=c++11 -W -Wall -Wextra -Wno-missing-field-initializers \
 all: tests crawler
 
 tests: tests.o
-	$(CXX) $(CXXOPTS) -ladns -o $@ $<
+	$(CXX) $(CXXOPTS) -o $@ $< -ladns
 
 crawler: main.o
-	$(CXX) $(CXXOPTS) -ladns -o $@ $<
+	$(CXX) $(CXXOPTS) -o $@ $< -ladns
 
 %.o: %.c++ *.h
 	$(CXX) $(CXXOPTS) -c -o $@ $<
