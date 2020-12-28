@@ -480,7 +480,8 @@ class Domain {
       output->handleLine(b, e);
 
       const char *c = b;
-      while(c != e && *c++ != ':'); --c;
+      while(c != e && *c++ != ':');
+      --c;
       if(*c != ':') return;
 
       if(*b == 'U' || *b == 'u') {
